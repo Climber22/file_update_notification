@@ -25,8 +25,15 @@ async function authorize() {
 
   // Check if we have previously stored a token.
   try {
-    const token = fs.readFileSync(TOKEN_PATH, { encoding: "utf-8" });
-    oAuth2Client.setCredentials(JSON.parse(token));
+    const token = {
+      access_token: process.env.DRIVE_ACCESS_TOKEN,
+      refresh_token: process.env.DRIVE_REFRESH_TOKEN,
+      scope: process.env.DRIVE_SCOPES,
+      token_type: process.env.TOKEN_TYPE,
+      expiry_date: process.env.DRIVE_EXPIRY_DATE
+    };
+
+    oAuth2Client.setCredentials(token);
     return oAuth2Client;
   } catch (error) {
     getAccessToken(oAuth2Client);
