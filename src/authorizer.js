@@ -54,7 +54,7 @@ async function getAccessToken(oAuth2Client) {
     const token = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(token);
     // Store the token to disk for later program executions
-    fs.writeFile(TOKEN_PATH, JSON.stringify(token), err => {
+    fs.writeFile(TOKEN_PATH, JSON.stringify(token.tokens), err => {
       if (err) console.error(err);
       console.log("Token stored to", TOKEN_PATH);
     });
