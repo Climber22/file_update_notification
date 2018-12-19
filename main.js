@@ -9,7 +9,10 @@ async function main() {
   try {
     // Authorize a client with credentials, then call the Google Drive API.
     const auth = await authorizer.authorize();
-    const rootDirId = await fileManipulater.getDirIdByName(auth, "PLUSPACE");
+    const rootDirId = await fileManipulater.getDirIdByName(
+      auth,
+      "PLUSPACE全社"
+    );
 
     const files = await fileManipulater.getFilesByUpdatedInGivenMinutes(
       auth,
