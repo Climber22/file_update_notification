@@ -14,7 +14,7 @@ async function main() {
     const files = await fileManipulater.getFilesByUpdatedInGivenMinutes(
       auth,
       rootDirId,
-      150
+      10
     );
 
     if (files.length == 0) return;
