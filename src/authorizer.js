@@ -42,7 +42,7 @@ async function authorize() {
 async function getAccessToken(oAuth2Client) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: SCOPES
+    scope: process.env.DRIVE_SCOPES
   });
   console.log("Authorize this app by visiting this url:", authUrl);
   const rl = readline.createInterface({
