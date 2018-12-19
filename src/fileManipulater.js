@@ -10,7 +10,9 @@ const moment = require("moment");
  * @return {integer} An number of file dirId.
  */
 
-async function getDirIdByName(auth, dirName) {
+const sleep = msec => new Promise(resolve => setTimeout(resolve, msec));
+
+async function getDirByName(auth, dirName) {
   const drive = google.drive({ version: "v3", auth });
 
   try {
@@ -19,7 +21,7 @@ async function getDirIdByName(auth, dirName) {
       q: `name = '${dirName}'`
     });
 
-    return res.data.files[0].id;
+    return res.data.files[0];
   } catch (err) {
     console.log("The API returned an error: " + err);
   }
@@ -35,6 +37,7 @@ async function getDirIdByName(auth, dirName) {
 async function listFiles(auth, dirId, files) {
   const drive = google.drive({ version: "v3", auth });
 
+  await sleep(5000);
   const res = await drive.files
     .list({
       pageSize: 100,
@@ -48,23 +51,28 @@ async function listFiles(auth, dirId, files) {
 
   const newFiles = res.data.files;
 
+  if (newFiles.length == 0) return files;
   for (let i = 0; i < newFiles.length; i++) {
+    const tmp = [];
     if (
-      newFiles[i] &
-      (newFiles[i].mimeType == "application/vnd.google-apps.folder")
+      newFiles[i] !== undefined &&
+      newFiles[i].mimeType == "application/vnd.google-apps.folder"
     ) {
-      listFiles(auth, newFiles[i].id, files);
-    } else {
-      files.push(newFiles[i]);
+      const children = await listFiles(auth, newFiles[i].id, files);
+      if (children.length > 0) {
+        Array.prototype.push.apply(tmp, children);
+      }
+    }
+    files.push(newFiles[i]);
+
+    if (i == newFiles.length - 1) {
+      Array.prototype.push.apply(files, tmp);
     }
   }
-
   return files;
 }
 
-async function getFilesByUpdatedInGivenMinutes(auth, rootDirId, minutes) {
-  const files = await listFiles(auth, rootDirId, []);
-
+async function getFilesByUpdatedInGivenMinutes(auth, files, minutes) {
   const newFiles = [];
   const thresholdTime = moment().subtract(minutes * 60, "seconds");
   files.forEach(file => {
@@ -75,30 +83,28 @@ async function getFilesByUpdatedInGivenMinutes(auth, rootDirId, minutes) {
   return newFiles;
 }
 
-async function createDirHierarchy(auth, file, rootDirId) {
+function createDirHierarchy(file, files, rootDir) {
   let fileTmp = file;
   const parents = [];
-  while (fileTmp.parents[0] !== rootDirId) {
-    const parent = await getFileById(auth, fileTmp.parents[0]);
+  while (fileTmp.parents[0] !== rootDir.id) {
+    const parent = getParent(fileTmp, files);
     parents.push(parent.name);
     fileTmp = parent;
   }
-  parents.push((await getFileById(auth, rootDirId)).name);
+  parents.push(rootDir.name);
   parents.reverse().push(file.name);
   return parents.join("/");
 }
 
-async function getFileById(auth, id) {
-  const drive = google.drive({ version: "v3", auth });
-  const res = await drive.files.get({
-    fileId: id,
-    fields: "*"
-  });
-  return res.data;
+function getParent(file, files) {
+  for (let i = 0; i < files.length; i++) {
+    if (files[i].id == file.parents[0]) {
+      return files[i];
+    }
+  }
 }
 
-module.exports.getDirIdByName = getDirIdByName;
+module.exports.getDirByName = getDirByName;
 module.exports.createDirHierarchy = createDirHierarchy;
 module.exports.getFilesByUpdatedInGivenMinutes = getFilesByUpdatedInGivenMinutes;
 module.exports.listFiles = listFiles;
-module.exports.getFileById = getFileById;

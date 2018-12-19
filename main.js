@@ -9,30 +9,25 @@ async function main() {
   try {
     // Authorize a client with credentials, then call the Google Drive API.
     const auth = await authorizer.authorize();
-    const rootDirId = await fileManipulater.getDirIdByName(
+    const rootDir = await fileManipulater.getDirByName(auth, "PLUSPACE全社");
+
+    const files = await fileManipulater.listFiles(auth, rootDir.id, []);
+    const updatedFiles = await fileManipulater.getFilesByUpdatedInGivenMinutes(
       auth,
-      "PLUSPACE全社"
+      files,
+      15
     );
+    var updatedFilesUniq = updatedFiles.filter(function(x, i, self) {
+      return self.indexOf(x) === i;
+    });
 
-    const files = await fileManipulater.getFilesByUpdatedInGivenMinutes(
-      auth,
-      rootDirId,
-      10
-    );
+    if (updatedFiles.length == 0) return;
 
-    if (files.length == 0) return;
+    const attachments = updatedFilesUniq.map(file => {
+      const filePath = fileManipulater.createDirHierarchy(file, files, rootDir);
 
-    const attachments = await Promise.all(
-      files.map(async file => {
-        const filePath = await fileManipulater.createDirHierarchy(
-          auth,
-          file,
-          rootDirId
-        );
-
-        return await slackAPI.buildJSONForAttachments(file, filePath);
-      })
-    );
+      return slackAPI.buildJSONForAttachments(file, filePath);
+    });
 
     slackAPI.postSlack(attachments);
   } catch (err) {
